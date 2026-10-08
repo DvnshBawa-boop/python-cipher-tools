@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caesar Cipher Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f3ecdf;
+    --card: #fbf7ef;
+    --ink: #1d2a2f;
+    --muted: #5d6b6f;
+    --rust: #b5532c;
+    --moss: #4f6b4a;
+    --line: #d9cfbb;
+    --focus: #1d2a2f;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 2.25rem;
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 2.9rem);
+    line-height: 1.05;
+    margin: 0 0 .5rem;
+    letter-spacing: -0.01em;
+  }
+  .lede { margin: 0; color: var(--muted); max-width: 46ch; }
+  .wheel-wrap { width: 150px; height: 150px; }
+  .wheel { width: 100%; height: 100%; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.4rem;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .field label, .field > span {
+    display: block;
+    font-weight: 500;
+    margin-bottom: .4rem;
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .seg button {
+    font: inherit;
+    background: transparent;
+    color: var(--ink);
+    border: 0;
+    padding: .5rem 1.1rem;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .seg button:focus-visible, input:focus-visible, textarea:focus-visible, .copy:focus-visible {
+    outline: 3px solid var(--rust);
+    outline-offset: 2px;
+  }
+  .shift-row { display: flex; align-items: center; gap: .75rem; }
+  input[type="range"] { flex: 1; accent-color: var(--rust); }
+  #shiftVal {
+    min-width: 2.5ch;
+    text-align: right;
+    font-weight: 500;
+  }
+  textarea {
+    width: 100%;
+    min-height: 130px;
+    resize: vertical;
+    font: inherit;
+    color: var(--ink);
+    background: #fffdf8;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: .8rem .9rem;
+  }
+  .out-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1.2rem 0 .4rem;
+  }
+  .copy {
+    font: inherit;
+    font-size: .9rem;
+    background: transparent;
+    border: 1px solid var(--moss);
+    color: var(--moss);
+    border-radius: 999px;
+    padding: .3rem .9rem;
+    cursor: pointer;
+  }
+  .copy:hover { background: var(--moss); color: #fff; }
+  #output { min-height: 130px; white-space: pre-wrap; word-break: break-word; }
+  .hint { color: var(--muted); font-size: .85rem; margin: .6rem 0 0; }
+  details {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+  }
+  summary { cursor: pointer; font-weight: 500; }
+  .brute {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: .4rem .9rem;
+    margin-top: .9rem;
+    font-size: .9rem;
+  }
+  .brute div { overflow-wrap: anywhere; }
+  .brute b { color: var(--rust); font-weight: 500; }
+  .credit {
+    margin-top: 1.5rem;
+    color: var(--muted);
+    font-size: .85rem;
+    text-align: center;
+  }
+  @media (max-width: 640px) {
+    header { grid-template-columns: 1fr; }
+    .wheel-wrap { width: 110px; height: 110px; }
+    .controls { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wheel { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="wheel-wrap" aria-hidden="true">
+      <svg class="wheel" id="wheel" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="96" fill="none" stroke="#1d2a2f" stroke-width="2"/>
+        <circle cx="100" cy="100" r="62" fill="none" stroke="#1d2a2f" stroke-width="2"/>
+        <g id="outerLetters" font-family="IBM Plex Mono, monospace" font-size="11" fill="#1d2a2f" text-anchor="middle"></g>
+        <g id="innerLetters" font-family="Fraunces, Georgia, serif" font-size="12" font-weight="600" fill="#b5532c" text-anchor="middle"></g>
+        <circle cx="100" cy="100" r="4" fill="#1d2a2f"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Caesar Cipher</h1>
+      <p class="lede">Shift every letter by a fixed amount to scramble a message, then shift it back to read it. Based on the Python tools in the python-cipher-tools repo.</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="controls">
+      <div class="field">
+        <span id="modeLabel">Mode</span>
+        <div class="seg" role="group" aria-labelledby="modeLabel">
+          <button type="button" data-mode="encrypt" aria-pressed="true">Encrypt</button>
+          <button type="button" data-mode="decrypt" aria-pressed="false">Decrypt</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="shift">Shift</label>
+        <div class="shift-row">
+          <input type="range" id="shift" min="1" max="25" value="3">
+          <span id="shiftVal">3</span>
+        </div>
+      </div>
+    </div>
+
+    <label for="input" class="field"><span>Message</span></label>
+    <textarea id="input" placeholder="Type something, e.g. Hello, World!"></textarea>
+
+    <div class="out-head">
+      <span id="outLabel">Result</span>
+      <button type="button" class="copy" id="copyBtn">Copy</button>
+    </div>
+    <textarea id="output" readonly aria-labelledby="outLabel"></textarea>
+    <p class="hint">Letters keep their case. Numbers, spaces, and punctuation are left as they are.</p>
+
+    <details>
+      <summary>Try every shift</summary>
+      <p class="hint">Useful when you have a scrambled message but not the key.</p>
+      <div class="brute" id="brute"></div>
+    </details>
+  </section>
+
+  <footer class="credit">
+    Built by Devaansh Bawa as a mini Python project. HTML built with a little help from Claude.
+  </footer>
+</main>
+
+<script>
+  const ALPHA = "abcdefghijklmnopqrstuvwxyz";
+  const $ = (id) => document.getElementById(id);
+
+  function caesar(text, shift) {
+    const n = ((shift % 26) + 26) % 26;
+    let out = "";
+    for (const ch of text) {
+      const lower = ch.toLowerCase();
+      const idx = ALPHA.indexOf(lower);
+      if (idx === -1) { out += ch; continue; }
+      const shifted = ALPHA[(idx + n) % 26];
+      out += ch === lower ? shifted : shifted.toUpperCase();
+    }
+    return out;
+  }
+
+  let mode = "encrypt";
+
+  function currentShift() {
+    return Number($("shift").value);
+  }
+
+  function update() {
+    const s = currentShift();
+    $("shiftVal").textContent = s;
+    const effective = mode === "encrypt" ? s : -s;
+    $("output").value = caesar($("input").value, effective);
+    $("outLabel").textContent = mode === "encrypt" ? "Encrypted" : "Decrypted";
+    rotateWheel(s);
+  }
+
+  function rotateWheel(s) {
+    $("wheel").style.transform = `rotate(${-s * (360 / 26)}deg)`;
+  }
+
+  function buildWheel() {
+    const outer = $("outerLetters");
+    const inner = $("innerLetters");
+    for (let i = 0; i < 26; i++) {
+      const angle = (i * 360) / 26 - 90;
+      const rad = (angle * Math.PI) / 180;
+      const ox = 100 + 84 * Math.cos(rad);
+      const oy = 100 + 84 * Math.sin(rad) + 4;
+      const ix = 100 + 42 * Math.cos(rad);
+      const iy = 100 + 42 * Math.sin(rad) + 4;
+      const o = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      o.setAttribute("x", ox); o.setAttribute("y", oy);
+      o.textContent = ALPHA[i].toUpperCase();
+      outer.appendChild(o);
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", ix); t.setAttribute("y", iy);
+      t.textContent = ALPHA[i].toUpperCase();
+      inner.appendChild(t);
+    }
+  }
+
+  function buildBrute() {
+    const text = $("input").value;
+    const box = $("brute");
+    box.innerHTML = "";
+    for (let s = 1; s <= 25; s++) {
+      const row = document.createElement("div");
+      const label = document.createElement("b");
+      label.textContent = `Shift ${s}: `;
+      row.appendChild(label);
+      row.appendChild(document.createTextNode(caesar(text, -s)));
+      box.appendChild(row);
+    }
+  }
+
+  document.querySelectorAll("[data-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      mode = btn.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+      update();
+    });
+  });
+
+  $("shift").addEventListener("input", () => { update(); });
+  $("input").addEventListener("input", () => { update(); buildBrute(); });
+
+  $("copyBtn").addEventListener("click", async () => {
+    const text = $("output").value;
+    try {
+      await navigator.clipboard.writeText(text);
+      $("copyBtn").textContent = "Copied";
+    } catch (e) {
+      $("output").select();
+      $("copyBtn").textContent = "Press Ctrl+C";
+    }
+    setTimeout(() => { $("copyBtn").textContent = "Copy"; }, 1500);
+  });
+
+  buildWheel();
+  buildBrute();
+  update();
+</script>
+</body>
+</html>
